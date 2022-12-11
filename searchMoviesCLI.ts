@@ -13,28 +13,31 @@ async function SearchDb() {
       const options = ["Search", "See Favourites"];
       const option = readlineSync.keyInSelect(options, "Choose an action!");
       if (option === 0) {
-        const search = readlineSync.question("Search Movies: ");
-        const text =
-          "SELECT id,name,date,runtime,budget,revenue,vote_average,votes_count FROM movies WHERE name LIKE $1 AND kind=$2 ORDER BY date DESC LIMIT 10 ";
-        const values = [`%${search}%`, "movie"];
-        let res = await client.query(text, values);
+        const res = await fetchSearchedMovies();
         console.table(res.rows);
-        addMovieToFavourites(res.rows);
+        if (res.rows.length) {
+          await addMovieToFavourites(res.rows);
+        }
       } else if (option === 1) {
-        console.log("Selecting favourites...");
-        const SelectFavs = "SELECT id, movie_id FROM favourites";
-        let res = await client.query(SelectFavs);
-        console.log("Favourites");
-        console.table(res.rows);
+        await viewFavouriteMovies();
       } else {
         break;
       }
     }
   } catch (error) {
     console.log("something went wrong!", error);
+    throw error;
   } finally {
     await client.end();
   }
+}
+
+async function viewFavouriteMovies() {
+  console.log("Selecting favourites...");
+  const SelectFavs = "SELECT id, movie_id FROM favourites";
+  let res = await client.query(SelectFavs);
+  console.log("Favourites");
+  console.table(res.rows);
 }
 
 async function addMovieToFavourites(rowsArr: any[]) {
@@ -49,7 +52,9 @@ async function addMovieToFavourites(rowsArr: any[]) {
       return;
     }
     const currFavsID = await client.query("SELECT id FROM favourites");
-    const ID = currFavsID.rows[currFavsID.rows.length - 1] + 1 ?? 0;
+    const ID = currFavsID.rows.length
+      ? currFavsID.rows[currFavsID.rows.length - 1].id + 1
+      : 0;
     console.log(ID);
     const values = [ID, rowsArr[selectedFavIndex].id];
     const insertFavourites =
@@ -58,7 +63,16 @@ async function addMovieToFavourites(rowsArr: any[]) {
     console.log(res);
   } catch (error) {
     console.log("Issues with adding favourites", error);
+    throw error;
   }
 }
 
 SearchDb();
+async function fetchSearchedMovies() {
+  const search = readlineSync.question("Search Movies: ");
+  const text =
+    "SELECT id,name,date,runtime,budget,revenue,vote_average,votes_count FROM movies WHERE name LIKE $1 AND kind=$2 ORDER BY date DESC LIMIT 10 ";
+  const values = [`%${search}%`, "movie"];
+  let res = await client.query(text, values);
+  return res;
+}
