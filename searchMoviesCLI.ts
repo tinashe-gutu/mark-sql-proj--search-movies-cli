@@ -33,10 +33,11 @@ async function SearchDb() {
 }
 
 async function viewFavouriteMovies() {
-  console.log("Selecting favourites...");
-  const SelectFavs = "SELECT id, movie_id FROM favourites";
-  let res = await client.query(SelectFavs);
-  console.log("Favourites");
+  console.log("Selecting favourites...\n");
+  const selectMovies =
+    "SELECT DISTINCT movies.id,name,date,runtime,budget,revenue,vote_average,votes_count FROM movies JOIN favourites ON movies.id = favourites.movie_id;";
+  let res = await client.query(selectMovies);
+  console.log("---Favourites---\n");
   console.table(res.rows);
 }
 
@@ -67,7 +68,6 @@ async function addMovieToFavourites(rowsArr: any[]) {
   }
 }
 
-SearchDb();
 async function fetchSearchedMovies() {
   const search = readlineSync.question("Search Movies: ");
   const text =
@@ -76,3 +76,5 @@ async function fetchSearchedMovies() {
   let res = await client.query(text, values);
   return res;
 }
+
+SearchDb();
